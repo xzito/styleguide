@@ -1,0 +1,181 @@
+#!/bin/bash
+# Pre-commit hook that runs a PHP style check and aborts the commit if
+# violations exist.
+
+function find_config_file() {
+  local _executable_name=$1
+  local root_path; root_path="$(find_root)"
+  local config_path; config_path="$root_path/site/vendor/xzito/styleguide"
+  local path_to_config=""
+
+  case "$_executable_name" in
+    "php-cs-fixer")
+      path_to_config="$config_path/.php_cs"
+      ;;
+    "phpcs")
+      path_to_config="$config_path/style_ruleset.xml"
+      ;;
+  esac
+
+  echo "$path_to_config"
+}
+
+function find_root() {
+  local project_root; project_root="$(git rev-parse --show-toplevel)"
+
+  echo "$project_root"
+}
+
+function find_executable() {
+  local _executable_name="$1"
+  local _root_path="$2"
+
+  locations=(
+    "/usr/local/bin/$_executable_name"
+    "$_root_path/site/vendor/bin/$_executable_name"
+    "$(which "$_executable_name")"
+  )
+
+  for location in ${locations[*]}; do
+    if [ -x "$location" ]; then
+      to_return="$location"
+      break
+    fi
+  done
+
+  if [ ! -x "$to_return" ]; then
+    echo "$_executable_name not found (did you run composer install?)"
+    exit 1
+  fi
+
+  echo "$to_return"
+}
+
+function create_unformatted_backups() {
+	if [ ! -d "$PWD/unformatted" ]; then
+		mkdir "$PWD/unformatted"
+	fi
+
+	# create new backup directory for any files that will be formatted
+	new_dir="$(date +%s)_unformatted"
+	new_dir_path="$PWD/unformatted/$new_dir"
+	mkdir "$new_dir_path"
+
+	# copy original files to backup directory
+	cp "$line" "$new_dir_path/$(basename "$line")"
+}
+
+# ------------
+# Main Routine
+
+# PHPCS Fixer
+PHP_CS_FIXER="$(find_executable 'php-cs-fixer')"
+config_file="$(find_config_file 'php-cs-fixer')"
+PHP_CS_FIXER_CONFIG="--config=$config_file --diff --verbose"
+
+#PHP Codesniffer
+PHPCS="$(find_executable 'phpcs')"
+config_file="$(find_config_file 'phpcs')"
+PHPCS_CONFIG="--standard=$config_file"
+
+# Error detection
+php_cs_fixer_errors_found=false
+php_cs_fixer_error_message=""
+
+phpcs_errors_found=false
+phpcs_error_message=""
+
+# Find dirty files and loop
+dirty_files=( $(git status --porcelain | \
+  grep -e '^[AM\?{2}].*\.php$' | \
+  cut -c 3-) )
+  while read -r line; do
+
+    # create backups of all files for now.
+    create_unformatted_backups
+
+    # First, run the fixer
+    "$PHP_CS_FIXER" fix "$PHP_CS_FIXER_CONFIG" "$line"
+    if [ $? -ne 0 ]; then
+      php_cs_fixer_error_message+="  - $line\n"
+      php_cs_fixer_errors_found=true
+    fi
+
+    # Hack to fix array indentation
+    # TODO: find a better place for this process to live, and make it
+    # shell-agnostic
+    insert=0
+
+    while IFS= read -r single_line; do
+
+      # if the line begins with ']' then unindent before writing the new
+      # line
+      bol_match='[]].*'
+      bol=false
+      if [[ "$single_line" =~ $bol_match ]]; then
+        ((insert-=2))
+        bol=true
+      fi
+
+      # insert the calculated num of spaces at the beginning of
+      # current line
+      if [[ ! $insert -eq 0 ]]; then
+        sequence="$(seq 1 $insert)"
+        chars="$(printf '%0.s ' "$sequence")"
+      else
+        chars=""
+      fi
+
+      # rebuild the current file in a temporary file
+      temp_file="$PWD/_$(basename "$line")"
+      echo "${chars}${single_line}" >> "$temp_file"
+
+      # make a copy of the current insert before mutating
+      current_insert=$insert
+
+      # if the line ends with '[' increase the indent by 2 chars
+      eol_match='^.*\[$'
+      eol=false
+      if [[ "$single_line" =~ $eol_match ]]; then
+        ((insert+=2))
+        eol=true
+      fi
+
+      # if the array opens and closes on the same line, there might
+      # be issues, so to be safe we reassign the original value
+      if [[ "$bol" = true && "$eol" = true ]]; then
+        ((insert=current_insert))
+      fi
+
+    done < "$line"
+
+    # last, overwrite the current file with the contents of the temporary file
+    "$PWD/_$(basename "$line")" > "$line"
+
+    # Run PHPCS on the file last for formatting errors that shouldn't be
+    # automatically corrected
+    "$PHPCS" "$PHPCS_CONFIG" "$line"
+    if [ $? -ne 0 ]; then
+      phpcs_error_message+="  - $line\n"
+      phpcs_errors_found=true
+    fi
+
+	done < "${dirty_files[*]}"
+
+# There is currently debate about exit codes in php-cs-fixer
+# https://github.com/FriendsOfPHP/PHP-CS-Fixer/issues/1211
+if [ "$php_cs_fixer_errors_found" = true ]; then
+  echo -en "\nPHP Codesniffer updated the following files:\n"
+  echo -en "${php_cs_fixer_error_message}"
+  echo -en "\nPlease review and commit.\n"
+  exit 1
+fi
+
+if [ "$phpcs_errors_found" = true ]; then
+  echo -en "\nPHP Codesniffer found errors in these files:\n"
+  echo -en "${phpcs_error_message}"
+  echo -en "\nPlease review, make updates, and retry.\n"
+  exit 1
+fi
+
+exit 0

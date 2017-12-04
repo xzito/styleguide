@@ -1,19 +1,20 @@
 <?php
 // vim: set ft=php:
 
+// require 'site/vendor/autoload.php';
+
 use Xzito\CS\Config\Config;
 
 $config = new Config();
-
+$config->setIndent("  ");
 $config->getFinder()
   ->files()
-  ->in('../' . __DIR__)
-  // ->exclude('build')
-  // ->exclude('vendor')
+  ->in('site/content/themes')
+  ->exclude('site/content/themes/twenty*')
   ->name('*.php')
-  // ->ignoreDotFiles(true)
-  // ->ignoreVCS(true);
-// $cacheDir = getenv('TRAVIS') ? getenv('HOME') . '/.php-cs-fixer' : __DIR__;
+  ->ignoreDotFiles(true)
+  ->ignoreVCS(true);
 $config->setCacheFile(__DIR__ . '/.php_cs.cache');
 
+return $config;
 

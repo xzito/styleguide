@@ -1,0 +1,17 @@
+#!/bin/sh
+# Installs a pre-commit git hook.
+
+function install {
+  local project_root=$(git rev-parse --show-toplevel)
+  local hook="$project_root/.git/hooks/pre-commit"
+  local hook_script="$project_root/bin/style/hooks/pre-commit"
+
+  if [ ! -d "$project_root/bin/style/hooks" ]; then
+    mkdir -p "$project_root/bin/style/hooks"
+  fi
+
+  cp "$hook_script" "$hook"
+  chmod +x "$hook"
+}
+
+install

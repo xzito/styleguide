@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<ruleset name="XzitoStyleguie">
+    <description>Lines must be a maximum of 80 characters</description>
+
+    <!-- Insert all sniff from PSR2 standard -->
+    <rule ref="PSR2"/>
+
+    <rule ref="Generic.Files.LineLength">
+        <properties>
+            <property name="absoluteLineLimit" value="80"/>
+        </properties>
+     </rule>
+</ruleset>
