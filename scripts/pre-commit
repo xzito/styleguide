@@ -52,6 +52,8 @@ function find_executable() {
 }
 
 function create_unformatted_backups() {
+  local _file; _file=$1
+
 	if [ ! -d "$PWD/unformatted" ]; then
 		mkdir "$PWD/unformatted"
 	fi
@@ -62,7 +64,7 @@ function create_unformatted_backups() {
 	mkdir "$new_dir_path"
 
 	# copy original files to backup directory
-	cp "$line" "$new_dir_path/$(basename "$line")"
+	cp "$_file" "$new_dir_path/$(basename "$_file")"
 }
 
 # ------------
@@ -71,7 +73,7 @@ function create_unformatted_backups() {
 # PHPCS Fixer
 PHP_CS_FIXER="$(find_executable 'php-cs-fixer')"
 config_file="$(find_config_file 'php-cs-fixer')"
-PHP_CS_FIXER_CONFIG="--config=$config_file --diff --verbose"
+PHP_CS_FIXER_CONFIG="--config=$config_file"
 
 #PHP Codesniffer
 PHPCS="$(find_executable 'phpcs')"
@@ -89,78 +91,80 @@ phpcs_error_message=""
 dirty_files=( $(git status --porcelain | \
   grep -e '^[AM\?{2}].*\.php$' | \
   cut -c 3-) )
-  while read -r line; do
 
-    # create backups of all files for now.
-    create_unformatted_backups
+for file in ${dirty_files[*]}; do
 
-    # First, run the fixer
-    "$PHP_CS_FIXER" fix "$PHP_CS_FIXER_CONFIG" "$line"
-    if [ $? -ne 0 ]; then
-      php_cs_fixer_error_message+="  - $line\n"
-      php_cs_fixer_errors_found=true
+  # create backups of all files for now.
+  create_unformatted_backups "$file"
+
+  # Hack to fix array indentation
+  # TODO: find a better place for this process to live, and make it
+  # shell-agnostic
+  insert=0
+
+  while IFS= read -r single_line; do
+
+    # if the line begins with ']' then unindent before writing the new
+    # line
+    bol_match='[]].*'
+    bol=false
+    if [[ "$single_line" =~ $bol_match ]]; then
+      ((insert-=2))
+      bol=true
     fi
 
-    # Hack to fix array indentation
-    # TODO: find a better place for this process to live, and make it
-    # shell-agnostic
-    insert=0
-
-    while IFS= read -r single_line; do
-
-      # if the line begins with ']' then unindent before writing the new
-      # line
-      bol_match='[]].*'
-      bol=false
-      if [[ "$single_line" =~ $bol_match ]]; then
-        ((insert-=2))
-        bol=true
-      fi
-
-      # insert the calculated num of spaces at the beginning of
-      # current line
-      if [[ ! $insert -eq 0 ]]; then
-        sequence="$(seq 1 $insert)"
-        chars="$(printf '%0.s ' "$sequence")"
-      else
-        chars=""
-      fi
-
-      # rebuild the current file in a temporary file
-      temp_file="$PWD/_$(basename "$line")"
-      echo "${chars}${single_line}" >> "$temp_file"
-
-      # make a copy of the current insert before mutating
-      current_insert=$insert
-
-      # if the line ends with '[' increase the indent by 2 chars
-      eol_match='^.*\[$'
-      eol=false
-      if [[ "$single_line" =~ $eol_match ]]; then
-        ((insert+=2))
-        eol=true
-      fi
-
-      # if the array opens and closes on the same line, there might
-      # be issues, so to be safe we reassign the original value
-      if [[ "$bol" = true && "$eol" = true ]]; then
-        ((insert=current_insert))
-      fi
-
-    done < "$line"
-
-    # last, overwrite the current file with the contents of the temporary file
-    "$PWD/_$(basename "$line")" > "$line"
-
-    # Run PHPCS on the file last for formatting errors that shouldn't be
-    # automatically corrected
-    "$PHPCS" "$PHPCS_CONFIG" "$line"
-    if [ $? -ne 0 ]; then
-      phpcs_error_message+="  - $line\n"
-      phpcs_errors_found=true
+    # insert the calculated num of spaces at the beginning of
+    # current line
+    if [[ ! $insert -eq 0 ]]; then
+      sequence="$(seq 1 $insert)"
+      chars="$(printf '%0.s ' "$sequence")"
+    else
+      chars=""
     fi
 
-	done < "${dirty_files[*]}"
+    # rebuild the current file in a temporary file
+    temp_file="$PWD/_$(basename "$file")"
+    echo "${chars}${single_line}" >> "$temp_file"
+
+    # make a copy of the current insert before mutating
+    current_insert=$insert
+
+    # if the line ends with '[' increase the indent by 2 chars
+    eol_match='^.*\[$'
+    eol=false
+    if [[ "$single_line" =~ $eol_match ]]; then
+      ((insert+=2))
+      eol=true
+    fi
+
+    # if the array opens and closes on the same line, there might
+    # be issues, so to be safe we reassign the original value
+    if [[ "$bol" = true && "$eol" = true ]]; then
+      ((insert=current_insert))
+    fi
+
+  done < "$file"
+
+  # last, overwrite the current file with the contents of the temporary file
+  # "$PWD/_$(basename "$file")" > "$file"
+  mv "$PWD/_$(basename "$file")" "$file"
+
+  # First, run the fixer
+  "$PHP_CS_FIXER" fix "$PHP_CS_FIXER_CONFIG" --diff --verbose --using-cache=no "$file"
+  if [ $? -ne 0 ]; then
+    php_cs_fixer_error_message+="  - $file\n"
+    php_cs_fixer_errors_found=true
+  fi
+
+  # Run PHPCS on the file last for formatting errors that shouldn't be
+  # automatically corrected
+  "$PHPCS" "$PHPCS_CONFIG" "$file"
+  if [ $? -ne 0 ]; then
+    phpcs_error_message+="  - $file\n"
+    phpcs_errors_found=true
+  fi
+
+done
 
 # There is currently debate about exit codes in php-cs-fixer
 # https://github.com/FriendsOfPHP/PHP-CS-Fixer/issues/1211

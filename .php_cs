@@ -1,7 +1,7 @@
 <?php
 // vim: set ft=php:
 
-// require 'site/vendor/autoload.php';
+require 'site/vendor/autoload.php';
 
 use Xzito\CS\Config\Config;
 

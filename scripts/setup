@@ -1,17 +1,35 @@
-#!/bin/sh
+#!/bin/bash
 # Installs a pre-commit git hook.
 
 function install {
-  local project_root=$(git rev-parse --show-toplevel)
-  local hook="$project_root/.git/hooks/pre-commit"
-  local hook_script="$project_root/bin/style/hooks/pre-commit"
+  HOOK_SOURCE="vendor/xzito/styleguide/scripts/pre-commit"
 
-  if [ ! -d "$project_root/bin/style/hooks" ]; then
-    mkdir -p "$project_root/bin/style/hooks"
+  local project_root; project_root="$(git rev-parse --show-toplevel)"
+  local hook="$project_root/.git/hooks/pre-commit"
+
+  echo "* Checking for an existing pre-commit hook..."
+
+  if [ -e "$project_root/.git/hooks/pre-commit" ]; then
+    local backup_file; backup_file="_$(date +%s)_pre-commit"
+    local hook_backup="$project_root/$backup_file"
+
+    echo "*"
+    echo "* pre-commit hook already exists."
+    echo "*"
+    echo "* Making a backup of the existing hook in:"
+    echo "*   $hook_backup"
+
+    cp "$hook" "$hook_backup"
   fi
 
-  cp "$hook_script" "$hook"
+  echo "*"
+  echo "* Creating pre-commit hook..."
+
+  cp "$HOOK_SOURCE" "$hook"
   chmod +x "$hook"
+
+  echo "*"
+  echo "* Hook installed..."
 }
 
 install
