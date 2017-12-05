@@ -9,8 +9,6 @@ class Config extends CsConfig
 
 	/**
 	 * Create new Config instance.
-	 *
-	 * @param string $name
 	 */
 	public function __construct($name = 'xzito')
 	{
@@ -19,9 +17,6 @@ class Config extends CsConfig
 		$this->setRiskyAllowed(true);
 	}
 
-	/**
-	 * @return array
-	 */
 	public function getRules()
 	{
 		$rules = [
@@ -29,15 +24,21 @@ class Config extends CsConfig
 			'@PSR2'                 => true,
 			'@PHP71Migration'       => true,
 			'@PHP71Migration:risky' => true,
+			'align_multiline_comment' => [
+				'comment_type' => 'all_multiline'
+			],
 			'array_syntax'          => [
-				'syntax' => 'short',
+				'syntax' => 'short'
 			],
 			'binary_operator_spaces' => [
-				'default' => 'align',
+				'default' => 'single_space'
 			],
 			'blank_line_after_opening_tag' => false,
-			'blank_line_before_statement'  => true,
-			'cast_spaces'                  => true,
+			'braces'                       => [
+				'allow_single_line_closure' => true,
+				'position_after_functions_and_oop_constructs' => 'same'
+			],
+			'cast_spaces'                  => false,
 			'class_keyword_remove'         => false,
 			'combine_consecutive_issets'   => true,
 			'combine_consecutive_unsets'   => true,
@@ -45,8 +46,10 @@ class Config extends CsConfig
 			'concat_space'                 => [
 				'spacing' => 'one',
 			],
-			'declare_equal_normalize'              => true,
-			'declare_strict_types'                 => true,
+			'declare_equal_normalize'              => [
+				'space' => 'single'
+			],
+			'declare_strict_types'                 => false,
 			'dir_constant'                         => true,
 			'doctrine_annotation_braces'           => true,
 			'doctrine_annotation_array_assignment' => true,
@@ -62,6 +65,7 @@ class Config extends CsConfig
 			'increment_style'                      => [
 				'style' => 'post',
 			],
+			'indentation_type' => true,
 			'is_null'                              => [
 				'use_yoda_style' => false,
 			],
@@ -84,7 +88,7 @@ class Config extends CsConfig
 			'no_alias_functions'                 => false,
 			'no_blank_lines_after_class_opening' => true,
 			'no_blank_lines_after_phpdoc'        => true,
-			'no_blank_lines_before_namespace'    => true,
+			'no_blank_lines_before_namespace'    => false,
 			'no_empty_comment'                   => true,
 			'no_empty_phpdoc'                    => true,
 			'no_empty_statement'                 => true,
@@ -102,6 +106,7 @@ class Config extends CsConfig
 					'use_trait',
 				],
 			],
+			'no_closing_tag' => true,
 			'no_null_property_initialization' => true,
 			'no_homoglyph_names'              => false,
 			'no_leading_import_slash'         => true,
@@ -118,7 +123,7 @@ class Config extends CsConfig
 			'no_spaces_around_offset'                     => true,
 			'no_trailing_comma_in_list_call'              => true,
 			'no_trailing_comma_in_singleline_array'       => true,
-			'no_unneeded_control_parentheses'             => true,
+			'no_unneeded_control_parentheses'             => false,
 			'no_unreachable_default_argument_value'       => true,
 			'no_unused_imports'                           => true,
 			'no_useless_else'                             => true,
@@ -127,7 +132,7 @@ class Config extends CsConfig
 			'no_whitespace_in_blank_line'                 => true,
 			'normalize_index_brace'                       => true,
 			'not_operator_with_space'                     => false,
-			'not_operator_with_successor_space'           => true,
+			'not_operator_with_successor_space'           => false,
 			'object_operator_without_whitespace'          => true,
 			'ordered_class_elements'                      => true,
 			'ordered_imports'                             => true,
@@ -145,7 +150,7 @@ class Config extends CsConfig
 			'phpdoc_inline_tag'                           => true,
 			'phpdoc_no_access'                            => true,
 			'phpdoc_no_alias_tag'                         => true,
-			'phpdoc_no_empty_return'                      => false,
+			'phpdoc_no_empty_return'                      => true,
 			'phpdoc_no_package'                           => true,
 			'phpdoc_no_useless_inheritdoc'                => true,
 			'phpdoc_return_self_reference'                => true,
@@ -174,10 +179,10 @@ class Config extends CsConfig
 			'space_after_semicolon'                       => true,
 			'standardize_not_equals'                      => true,
 			'strict_comparison'                           => false, // risky
-			'strict_param'                                => true, // risky
+			'strict_param'                                => false, // risky
 			'ternary_operator_spaces'                     => true,
 			'ternary_to_null_coalescing'                  => true,
-			'trailing_comma_in_multiline_array'           => true,
+			'trailing_comma_in_multiline_array'           => false,
 			'trim_array_spaces'                           => true,
 			'unary_operator_spaces'                       => true,
 			'whitespace_after_comma_in_array'             => true,
@@ -185,5 +190,5 @@ class Config extends CsConfig
 
 		return $rules;
 	}
-
 }
+
