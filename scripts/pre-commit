@@ -5,7 +5,7 @@
 function find_config_file() {
   local _executable_name=$1
   local root_path; root_path="$(find_root)"
-  local config_path; config_path="$root_path/site/vendor/xzito/styleguide"
+  local config_path; config_path="$root_path/vendor/xzito/styleguide"
   local path_to_config=""
 
   case "$_executable_name" in
@@ -32,8 +32,8 @@ function find_executable() {
 
   locations=(
     "/usr/local/bin/$_executable_name"
-    "$_root_path/site/vendor/bin/$_executable_name"
-    "$(which "$_executable_name")"
+    "$_root_path/vendor/bin/$_executable_name"
+    "$(command -v "$_executable_name")"
   )
 
   for location in ${locations[*]}; do
@@ -88,9 +88,11 @@ phpcs_errors_found=false
 phpcs_error_message=""
 
 # Find dirty files and loop
-dirty_files=( $(git status --porcelain | \
-  grep -e '^[AM\?{2}].*\.php$' | \
-  cut -c 3-) )
+dirty_files=( \
+  "$(git status --porcelain \
+    | grep -e '^[AM\?{2}].*\.php$' \
+    | cut -c 3-)" \
+)
 
 for file in ${dirty_files[*]}; do
 
@@ -145,22 +147,26 @@ for file in ${dirty_files[*]}; do
 
   done < "$file"
 
-  # last, overwrite the current file with the contents of the temporary file
-  # "$PWD/_$(basename "$file")" > "$file"
+  # overwrite the current file with the contents of the temporary file
   mv "$PWD/_$(basename "$file")" "$file"
 
-  # First, run the fixer
-  "$PHP_CS_FIXER" fix "$PHP_CS_FIXER_CONFIG" --diff --verbose --using-cache=no "$file"
+  # run the fixer
+  "$PHP_CS_FIXER" fix "$PHP_CS_FIXER_CONFIG" \
+    --diff \
+    --verbose \
+    --using-cache=no \
+    "$file"
+
   if [ $? -ne 0 ]; then
-    php_cs_fixer_error_message+="  - $file\n"
+    php_cs_fixer_error_message+="  - $file\\n"
     php_cs_fixer_errors_found=true
   fi
 
-  # Run PHPCS on the file last for formatting errors that shouldn't be
+  # run PHPCS on the file last for formatting errors that shouldn't be
   # automatically corrected
   "$PHPCS" "$PHPCS_CONFIG" "$file"
   if [ $? -ne 0 ]; then
-    phpcs_error_message+="  - $file\n"
+    phpcs_error_message+="  - $file\\n"
     phpcs_errors_found=true
   fi
 
@@ -169,16 +175,16 @@ done
 # There is currently debate about exit codes in php-cs-fixer
 # https://github.com/FriendsOfPHP/PHP-CS-Fixer/issues/1211
 if [ "$php_cs_fixer_errors_found" = true ]; then
-  echo -en "\nPHP Codesniffer updated the following files:\n"
+  echo -en "\\nPHP Codesniffer updated the following files:\\n"
   echo -en "${php_cs_fixer_error_message}"
-  echo -en "\nPlease review and commit.\n"
+  echo -en "\\nPlease review and commit.\\n"
   exit 1
 fi
 
 if [ "$phpcs_errors_found" = true ]; then
-  echo -en "\nPHP Codesniffer found errors in these files:\n"
+  echo -en "\\nPHP Codesniffer found errors in these files:\\n"
   echo -en "${phpcs_error_message}"
-  echo -en "\nPlease review, make updates, and retry.\n"
+  echo -en "\\nPlease review, make updates, and retry.\\n"
   exit 1
 fi
 
