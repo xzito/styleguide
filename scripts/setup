@@ -26,7 +26,7 @@ function install {
   if [ -e "$project_root/.git/hooks/pre-commit" ]; then
     echo "* pre-commit hook already exists."
 
-    if grep -q "run the fixer" "$project_root/.git/hooks/pre-commit"; then
+    if ! grep -q "run the fixer" "$project_root/.git/hooks/pre-commit"; then
       echo "*"
       echo "* Existing pre-commit hook isn't checking PHP style. Making a "
       echo "* backup of the existing pre-commit hook, and then installing "
