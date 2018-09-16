@@ -1,35 +1,52 @@
 #!/bin/bash
 # Installs a pre-commit git hook.
 
+hook_source="vendor/xzito/styleguide/scripts/pre-commit"
+
+project_root="$(git rev-parse --show-toplevel)"
+hook="$project_root/.git/hooks/pre-commit"
+hook_backups="$project_root/.git/hooks/backups"
+backup_file="$(date +%s)_pre-commit"
+hook_backup="$hook_backups/$backup_file"
+
+function create_hook {
+  echo "*"
+  echo "* Setting up pre-commit hook..."
+
+  cp "$hook_source" "$hook"
+  chmod +x "$hook"
+
+  echo "* Hook installed."
+}
+
 function install {
-  HOOK_SOURCE="vendor/xzito/styleguide/scripts/pre-commit"
-
-  local project_root; project_root="$(git rev-parse --show-toplevel)"
-  local hook="$project_root/.git/hooks/pre-commit"
-
+  echo
   echo "* Checking for an existing pre-commit hook..."
 
   if [ -e "$project_root/.git/hooks/pre-commit" ]; then
-    local backup_file; backup_file="_$(date +%s)_pre-commit"
-    local hook_backup="$project_root/$backup_file"
-
-    echo "*"
     echo "* pre-commit hook already exists."
-    echo "*"
-    echo "* Making a backup of the existing hook in:"
-    echo "*   $hook_backup"
 
-    cp "$hook" "$hook_backup"
+    if grep -q "run the fixer" "$project_root/.git/hooks/pre-commit"; then
+      echo "*"
+      echo "* Existing pre-commit hook isn't checking PHP style. Making a "
+      echo "* backup of the existing pre-commit hook, and then installing "
+      echo "* the new hook."
+
+      if [ ! -d "$hook_backups" ]; then
+        mkdir "$hook_backups"
+      fi
+
+      echo "*"
+      echo "* Making a backup of the existing hook in:"
+      echo "*   $hook_backup"
+
+      cp "$hook" "$hook_backup"
+
+      create_hook
+    fi
+  else
+    create_hook
   fi
-
-  echo "*"
-  echo "* Creating pre-commit hook..."
-
-  cp "$HOOK_SOURCE" "$hook"
-  chmod +x "$hook"
-
-  echo "*"
-  echo "* Hook installed..."
 }
 
 install
