@@ -1,6 +1,6 @@
 {
   "name": "xzito/styleguide",
-  "version" : "0.5.0",
+  "version" : "0.6.0",
   "description": "The Xzito PHP coding standards.",
   "type": "library",
   "authors": [
